@@ -24,7 +24,12 @@ QString NormalizeNumber(const QString& text) {
     }
     if (text.startsWith('-')) {
         // Рекурсивный вызов.
-        return "-" + NormalizeNumber(text.mid(1));
+        QString rest = NormalizeNumber(text.mid(1));
+        // Не допускаем отображение -0.
+        if (rest == "0") {
+            return "0";
+        }
+        return "-" + rest;
     }
     if (text.startsWith('0') && !text.startsWith("0.")) {
         return NormalizeNumber(RemoveTrailingZeroes(text));
@@ -73,6 +78,10 @@ void MainWindow::SetText(const QString& text) {
 }
 
 void MainWindow::AddText(const QString& suffix) {
+    // После получения результата (операция сброшена) начинаем новый ввод и очищаем формулу.
+    if (input_number_.isEmpty() && current_operation_ == Operation::NO_OPERATION) {
+        ui->l_formula->setText("");
+    }
     SetText(input_number_ + suffix);
 }
 
@@ -132,7 +141,20 @@ void MainWindow::on_tb_comma_clicked() {
 }
 
 void MainWindow::on_tb_negate_clicked() {
-    if (input_number_.startsWith("-")) {
+    if (input_number_.isEmpty()) {
+        // Нет активного ввода: меняем знак текущего отображаемого числа
+        // (результат операции или ранее введённый операнд).
+        active_number_ = -active_number_;
+        // Избегаем отрицательного нуля.
+        if (active_number_ == 0.0) {
+            active_number_ = 0.0;
+        }
+        SetText(QString::number(active_number_));
+        // После результата очищаем формулу.
+        if (current_operation_ == Operation::NO_OPERATION) {
+            ui->l_formula->setText("");
+        }
+    } else if (input_number_.startsWith("-")) {
         SetText(input_number_.mid(1));
     } else {
         SetText("-" + input_number_);
